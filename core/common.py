@@ -36,12 +36,11 @@ def get_inference_service_metadata(service_name):
     """
         Fetch the inference service metadata given the service name
     """
-    inference_service_exists = check_inference_service_existence(service_name)
-
-    if not inference_service_exists:
+    try:
+        inference_service = InferenceServiceMapping.objects.get(service_name=service_name)
+    except Exception as e:
+        print(e)
         raise Exception(f'The inference service with the tag {service_name} does not exist or is unavailable.')
-    
-    inference_service = InferenceServiceMapping.objects.get(service_name)
     response = requests.get(inference_service.information_url)
 
     return response.json()
