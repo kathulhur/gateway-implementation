@@ -14,3 +14,7 @@ class InferenceServiceMapping(models.Model):
 
     def __str__(self):
         return f"{self.service_name} -> {self.ip_address}:{self.port}"
+    
+    @property
+    def information_url(self):
+        return f'http://{self.ip_address}:{self.port}/info/'

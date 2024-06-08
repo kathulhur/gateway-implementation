@@ -1,25 +1,14 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 import json, pathlib
+from . import common
 # Create your views here.
 
 MODULE_DIR = pathlib.Path(__file__).parent
 sample_image_path = MODULE_DIR / 'assets' / 'image.png'
-def info(request):
-    dummyInferenceServicesMetadata = {
-        'available_inference_services': {
-            'YOLO7': {
-                'input_files': [ ['image/*'] ],
-                'model_artifacts': [ ['.pt'] ],
-            },
-            'YOLOv8': {
-                'input_files': [ ['image/*', 'video/*'] ],
-                'model_artifacts': [ ['.pt'] ],
-            }
-        }
-    }    
 
-    return HttpResponse(json.dumps(dummyInferenceServicesMetadata), content_type='application/json')
+def info(request):
+    return HttpResponse(json.dumps(common.get_available_inference_services()), content_type='application/json')
     
 
 def inference(request):
