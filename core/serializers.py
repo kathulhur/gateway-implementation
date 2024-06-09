@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.core.files.uploadedfile import TemporaryUploadedFile, InMemoryUploadedFile
-from . import common
+from . import services
 from typing import Union, List
 
 class InferenceSerializer(serializers.Serializer):
@@ -18,30 +18,31 @@ class InferenceSerializer(serializers.Serializer):
 
     def validate_inference_service(self, value):
 
-        service_name_exists = common.check_inference_service_existence(value)
+        inference_service_available = services.inferenceServiceManager.check_inference_service_availability(value)
 
-        if service_name_exists:
+        if inference_service_available:
             return value
         
         raise serializers.ValidationError(f'The inference service with the tag {value} does not exist or is unavailable.')
     
+    
+    def validate(self, attrs):
+        inference_service_name = attrs.get('inference_service')
 
-    def validate_input_files(self, value):
-        metadata = common.get_inference_service_metadata(value)
 
-        if len(value) != len(metadata['input_files']):
+        metadata = services.inferenceServiceManager.get_inference_service_metadata(inference_service_name)
+        input_files = attrs.get('input_files')
+        model_artifacts = attrs.get('model_artifacts')
+
+        if len(input_files) != len(metadata['input_files']):
             raise serializers.ValidationError(f'There must be {len(metadata["input_files"])} input files attached')
-        return value
 
-    def validate_model_artifacts(self, value: List[Union[TemporaryUploadedFile, InMemoryUploadedFile]]):
-        metadata = common.get_inference_service_metadata(value)
-
-        if len(value) != len(metadata['model_artifacts']):
+        if len(model_artifacts) != len(metadata['model_artifacts']):
             raise serializers.ValidationError(f'There must be {len(metadata["model_artifacts"])} model artifacts attached')
 
 
-        for i in range(len(value)):
-            file = value[i]
+        for i in range(len(model_artifacts)):
+            file = model_artifacts[i]
             if isinstance(file, TemporaryUploadedFile):
                 file_extension = '.' + file.name.split('.')[-1]
                 if file_extension not in metadata['model_artifacts'][i]:
@@ -53,5 +54,5 @@ class InferenceSerializer(serializers.Serializer):
                     raise serializers.ValidationError(f'The file extension of a model artifact is invalid')
                 
 
-        return value
+        return attrs
     
