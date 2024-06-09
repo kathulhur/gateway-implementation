@@ -18,3 +18,8 @@ class InferenceServiceMapping(models.Model):
     @property
     def information_url(self):
         return f'http://{self.ip_address}:{self.port}/info/'
+    
+
+    @property
+    def inference_url(self):
+        return f'http://{self.ip_address}:{self.port}/inference/'
