@@ -35,10 +35,10 @@ class InferenceSerializer(serializers.Serializer):
         model_artifacts = attrs.get('model_artifacts')
 
         if len(input_files) != len(metadata['input_files']):
-            raise serializers.ValidationError(f'There must be {len(metadata["input_files"])} input files attached')
+            raise serializers.ValidationError({ 'input_files': f'There must be {len(metadata["input_files"])} input files attached' })
 
         if len(model_artifacts) != len(metadata['model_artifacts']):
-            raise serializers.ValidationError(f'There must be {len(metadata["model_artifacts"])} model artifacts attached')
+            raise serializers.ValidationError({ 'model_artifacts': f'There must be {len(metadata["model_artifacts"])} model artifacts attached' })
 
 
         for i in range(len(model_artifacts)):
@@ -46,12 +46,12 @@ class InferenceSerializer(serializers.Serializer):
             if isinstance(file, TemporaryUploadedFile):
                 file_extension = '.' + file.name.split('.')[-1]
                 if file_extension not in metadata['model_artifacts'][i]:
-                    raise serializers.ValidationError(f'The file extension of a model artifact is invalid')
+                    raise serializers.ValidationError({ 'input_files': f'The file extension of a model artifact is invalid' })
                 
             elif isinstance(file, InMemoryUploadedFile):
                 file_extension = '.' + file.name.split('.')[-1]
                 if file_extension not in metadata['model_artifacts'][i]:
-                    raise serializers.ValidationError(f'The file extension of a model artifact is invalid')
+                    raise serializers.ValidationError({ 'input_files': f'The file extension of a model artifact is invalid' })
                 
 
         return attrs
