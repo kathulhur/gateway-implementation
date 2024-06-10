@@ -3,6 +3,7 @@ from rest_framework import status
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 import pathlib
+from core.models import InferenceServiceMapping
 
 
 MODULE_DIR = pathlib.Path(__file__).parent
@@ -24,15 +25,18 @@ class InformationEndpointTest(APITestCase):
         self.assertEqual(response.headers.get('Content-Type'), 'application/json')
 
 
-    @patch('core.common.get_available_inference_services')
-    def test_information_endpoint_contains_the_expected_data(self, mocked_get_available_inference_services):
-
-        mocked_get_available_inference_services.return_value = {
+    @patch('core.services.inferenceServiceManager')
+    def test_information_endpoint_contains_the_expected_data(self, mockedInferenceServiceManager):
+        mockedInferenceServiceManager.get_available_inference_services_metadata.return_value = {
             'available_inference_services': {
                 'YOLOv8': {
                     'input_files': [],
                     'model_artifacts': []
-                }
+                },
+                'YOLOv9': {
+                    'input_files': [],
+                    'model_artifacts': []
+                },
             }
         }
 
@@ -40,11 +44,12 @@ class InformationEndpointTest(APITestCase):
         response = self.client.get('/api/info/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.headers.get('Content-Type'), 'application/json')
-        mocked_get_available_inference_services.assert_called_once()
 
         data = response.json()
 
         self.assertIn('available_inference_services', data)
+        self.assertIn('YOLOv8', data['available_inference_services'])
+        self.assertIn('YOLOv9', data['available_inference_services'])
 
         for metadata in data['available_inference_services'].values():
             self.assertIn('input_files', metadata)
@@ -67,18 +72,25 @@ class InferenceEndpointTest(APITestCase):
         self.assertIn('input_files', response.data)
         self.assertIn('model_artifacts', response.data)
 
-    @patch('core.common.get_inference_service_metadata')
-    @patch('core.common.check_inference_service_existence')
-    def test_inference_endpoint_with_valid_input(self, mocked_check_inference_service_existence, mocked_get_inference_service_metadata):
+    @patch('requests.post')
+    @patch('core.services.inferenceServiceManager')
+    def test_inference_endpoint_with_valid_input(self, mockedInferenceServiceManager, mockedPost):
 
-        mocked_get_inference_service_metadata.return_value = {
+
+        mockedInferenceServiceManager.check_inference_service_availability.return_value = True
+        mockedInferenceServiceManager.get_inference_service_metadata.return_value = {
             'input_files': [ ['image'] ],
             'model_artifacts': [ ['.pt'] ]
         }
+        mockedInferenceServiceManager.get_inference_service_by_name.return_value = InferenceServiceMapping.objects.create(service_name='YOLOv8', ip_address='127.0.0.1', port=8000)
 
-        mocked_check_inference_service_existence.return_value = True
-        
 
+        mockedPost.return_value.status_code = 200
+        mockedPost.return_value.headers = {'Content-Type': 'image/png'}
+
+        with yolov8_file_path.open('rb') as f:
+            mockedPost.return_value.content = f.read()
+            
         image = None
         with image_file_path.open('rb') as f:
             image = SimpleUploadedFile('image.png', f.read(), 'image/png')
@@ -93,21 +105,21 @@ class InferenceEndpointTest(APITestCase):
             'input_files': [image],
             'model_artifacts': [model_artifact],
         })
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.headers.get('Content-Type'), 'image/png')
+        mockedPost.assert_called_once()
+        mockedInferenceServiceManager.check_inference_service_availability.assert_called_once()
+        mockedInferenceServiceManager.get_inference_service_metadata.assert_called_once()
+        mockedInferenceServiceManager.get_inference_service_by_name.assert_called_once()
 
 
-    @patch('core.common.get_inference_service_metadata')
-    @patch('core.common.check_inference_service_existence')
-    def test_inference_endpoint_excess_input(self, mocked_check_inference_service_existence, mocked_get_inference_service_metadata):
-
-        mocked_get_inference_service_metadata.return_value = {
+    @patch('core.services.inferenceServiceManager')
+    def test_inference_endpoint_excess_input(self, mockedInferenceServiceManager):
+        mockedInferenceServiceManager.get_inference_service_metadata.return_value = {
             'input_files': [ ['image'] ],
             'model_artifacts': [ ['.pt'] ]
         }
-
-        mocked_check_inference_service_existence.return_value = True
-        
 
         image = None
         with image_file_path.open('rb') as f:
