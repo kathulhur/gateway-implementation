@@ -10,10 +10,14 @@ class InferenceServiceManager:
     def get_available_inference_services_metadata(self):
         
         inference_services = InferenceServiceMapping.objects.all()
-        
+        self.inference_services = dict()
         for service in inference_services:
-            response = requests.get(service.information_url)
-            self.inference_services[service.service_name] = response.json()
+            try:
+                response = requests.get(service.information_url)
+                self.inference_services[service.service_name] = response.json()
+            except Exception as e:
+                print(f'==========Cannot establish connection with {service.service_name} Inference Service.')
+                print(e)
 
         return self.inference_services
 
