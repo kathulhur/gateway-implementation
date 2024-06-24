@@ -13,7 +13,8 @@ class InferenceSerializer(serializers.Serializer):
 
     model_artifacts = serializers.ListField(
         child=serializers.FileField(),
-        allow_empty=False
+        required=False,
+        default=list
     )
 
     def validate_inference_service(self, value):
